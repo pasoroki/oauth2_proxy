@@ -229,6 +229,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		provider:           opts.provider,
 		serveMux:           serveMux,
 		redirectURL:        redirectURL,
+		whitelistDomains:   opts.WhitelistDomains,
 		skipAuthRegex:      opts.SkipAuthRegex,
 		skipAuthPreflight:  opts.SkipAuthPreflight,
 		compiledRegex:      opts.CompiledRegex,

@@ -48,6 +48,7 @@ func TestGoogleGroupOptions(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 
 	expected := errorMsg([]string{
+		"incorrect setting: 'google-group' parameter could be used within google provider only",
 		"missing setting: google-admin-email",
 		"missing setting: google-service-account-json"})
 	assert.Equal(t, expected, err.Error())
@@ -63,6 +64,7 @@ func TestGoogleGroupInvalidFile(t *testing.T) {
 
 	expected := errorMsg([]string{
 		"invalid Google credentials file: file_doesnt_exist.json",
+		"incorrect setting: 'google-group' parameter could be used within google provider only",
 	})
 	assert.Equal(t, expected, err.Error())
 }
