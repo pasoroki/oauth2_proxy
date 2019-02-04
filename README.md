@@ -150,6 +150,49 @@ For adding an application to the Microsoft Azure AD follow [these steps to add a
 
 Take note of your `TenantId` if applicable for your situation. The `TenantId` can be used to override the default `common` authorization server with a tenant specific server.
 
+[Azure AD Native applications](https://docs.microsoft.com/en-us/azure/active-directory/develop/native-app) can authorize on user behalf, so they don't need to store an app secret.
+
+#### Group Support
+
+The Azure provider supports passing (optionally filtered) group membership information, as well as doing basic authorization checking based on group membership.
+
+Set the `pass-groups` flag to enable an additional X-Forwarded-Groups header that contains a pipe-separated list of groups to which the user belongs.
+
+The `filter-groups` flag enables a simple filter that will elide any groups that do not contain that string. For example, if the `filter-groups` flag were set to `admins`, the X-Forwarded-Groups header for a user in groups `[foo-admins, bar-admins, users-foo-group]` would be `foo-admins|bar-admins`. If the flag were set to `foo`, the header would be `foo-admins|users-foo-group`.
+
+The `permit-groups` flag requires that a user belong to a group that contains the specified string (or one of the specified strings). The X-Forwarded-Group header is checked for a `strings.Contains` match for each item in the list.
+The `permit-groups` can contain list of group names only, or group names with their IDs delimited by the `:` symbol. E.g:
+```
+    permit_groups = [
+        "foo-admins:a1234567-abcd-fghi-jklm-01234567890z",
+        "foo-users:ID2",
+        "foo-whatever"
+    ]
+```
+It is much more preferable to indicate expected group ID as it is harder to sneak in using same group name from another org.
+
+The `groups-exemption` list users that will be allowed in in case if azure fails to verify group membership for user. Which could be the case if application don't have enough permission in domain
+```
+    groups_exemption = [
+        "foo@example.com:01234567-89AB-CDEF-GHIJ-K9876543210",
+        "bar@example.com",
+    ]
+```
+In such case user will be let in with X-Forwarded-Groups header containing ONLY groups from `groups_exemption` list
+
+The `group-delimiter` flag reflects how multiple group names will be represented in X-Forwarded-Groups header. By default group names will be delimited with '|' symbol
+
+So, if all `permit-groups`, `groups-exemption` and `filter-groups` are set:
+ - if our application has all required permissions to get user group memberships
+    1. We're getting all user group memberships
+    2. If user is not member of any of the `permit-groups` - auth failed
+    3. X-Forwarded-Groups contains all user groups that contain `filter-groups` string
+ - if our application is having issues with user authentication
+    1. We're getting all user group memberships, that fails
+    2. If user is not defined in `groups-exemption` list - auth failed
+    3. X-Forwarded-Groups contains all user groups defined in  `permit-groups` that contain `filter-groups` string
+ 
+
 ### OpenID Connect Provider
 
 OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects. This provider was originally built against CoreOS Dex and we will use it as an example.
@@ -216,6 +259,10 @@ Usage of oauth2_proxy:
   -pass-basic-auth: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
   -pass-host-header: pass the request Host Header to upstream (default true)
   -pass-user-headers: pass X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
+  -filter-groups string: only pass groups in the X-Forwarded-Groups header that contain this string
+  -pass-groups boolean: pass a pipe-separated list of groups to which the user belongs in the X-Forwarded-Groups header
+  -permit-groups string: The user groups to which a user must belong in order to use the proxy (see also filter-groups)
+  -groups-exemption string: List of users that could authorize in case if groups check fails. In such case they will have `permit-groups` in their group list
   -profile-url string: Profile access endpoint
   -provider string: OAuth provider (default "google")
   -proxy-prefix string: the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in) (default "/oauth2")
